@@ -1,4 +1,6 @@
 openaq.pem
 location-2178-20220503.csv
 locations.json
-wide_csv.csv
+wide_test.csv
+timescale-air_quality-credentials.env
+test_db.py
