@@ -1,0 +1,57 @@
+import boto3
+import pandas as pd
+import uuid
+import os
+from concurrent.futures import ThreadPoolExecutor
+import time
+
+
+s3 = boto3.client('s3')
+bucket = 'openaq-sensor-data'
+
+def combine_yearly_files(retry = 5, delay = 2):
+    city = "zurich"
+    prefix = f"{city}/wide/"
+    temp_path = f"/tmp/file_{uuid.uuid4()}.csv"
+    output_key = "global_database_file.csv"
+
+    attempt = 0
+    while attempt < retry:
+        try:
+            response = s3.list_objects_v2(Bucket=bucket, Prefix=prefix)
+            files = [obj['Key'] for obj in response.get('Contents', []) if obj['Key'].endswith('.csv')]
+
+            dfs = []
+            for file_key in files:
+                obj = s3.get_object(Bucket=bucket, Key=file_key)
+                df=pd.read_csv(obj['Body'])
+                dfs.append(df)
+
+            if not dfs:
+                print(f"No files to merge.")
+                return    
+
+            df_all = pd.concat(dfs, ignore_index=True)
+            df_avg = df_all.groupby("datetime", as_index = False).mean()
+            df_avg.to_csv(temp_path, index = False)
+
+            s3.upload_file(temp_path, bucket, output_key)
+            print(f"{output_key} created and saved.")
+            break
+
+        except Exception as e:
+            attempt += 1
+            if attempt < retry:
+                time.sleep(delay)
+                print(f"Error while creating file: {e}. Retrying: ({attempt}/{retry}) ...")
+            else:
+                print(f"File not created : {e}.")
+
+    if os.path.exists(temp_path):
+        os.remove(temp_path)
+
+def main():
+    combine_yearly_files()
+    
+if __name__ == "__main__":
+  main()
