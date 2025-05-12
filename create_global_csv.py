@@ -11,9 +11,9 @@ bucket = 'openaq-sensor-data'
 
 def combine_yearly_files(retry = 5, delay = 2):
     city = "zurich"
-    prefix = f"{city}/wide/"
+    prefix = f"{city}/wide/yearly_files"
     temp_path = f"/tmp/file_{uuid.uuid4()}.csv"
-    output_key = "global_database_file.csv"
+    output_key = f"{city}/wide/global_{city}_file.csv"
 
     attempt = 0
     while attempt < retry:
@@ -23,21 +23,29 @@ def combine_yearly_files(retry = 5, delay = 2):
 
             dfs = []
             for file_key in files:
-                obj = s3.get_object(Bucket=bucket, Key=file_key)
-                df=pd.read_csv(obj['Body'])
-                dfs.append(df)
+                try:
+                    obj = s3.get_object(Bucket=bucket, Key=file_key)
+                    df=pd.read_csv(obj['Body'])
+                    print(f"Processing {file_key} ...")
+                    dfs.append(df)
+                except Exception as e:
+                    print(f"Failed to process {file_key}: {e}")
 
             if not dfs:
                 print(f"No files to merge.")
                 return    
 
-            df_all = pd.concat(dfs, ignore_index=True)
-            df_avg = df_all.groupby("datetime", as_index = False).mean()
-            df_avg.to_csv(temp_path, index = False)
+            print("Concatening all files into one")
+            try:
+                df_all = pd.concat(dfs, ignore_index=True)
+                df_avg = df_all.groupby("datetime", as_index = False).mean()
+                df_avg.to_csv(temp_path, index = False)
 
-            s3.upload_file(temp_path, bucket, output_key)
-            print(f"{output_key} created and saved.")
-            break
+                s3.upload_file(temp_path, bucket, output_key)
+                print(f"{output_key} created and saved.")
+                break
+            except Exception as e:
+                print(f"Failed to create global file :{e}")
 
         except Exception as e:
             attempt += 1

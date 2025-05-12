@@ -26,7 +26,6 @@ def upload_csv_to_db(file, conn):
     try:
         s3.download_file(bucket, file, temp_path)
 
-
         with conn.cursor() as cursor, open(temp_path, 'r', encoding='utf-8') as f:
             cursor.copy_expert(
                 sql="COPY air_quality FROM STDIN WITH CSV HEADER",

@@ -31,6 +31,7 @@ def combine_yearly_files(city, location_id, year, retry = 5, delay = 2):
             for file_key in files:
                 obj = s3.get_object(Bucket=bucket, Key=file_key)
                 df=pd.read_csv(obj['Body'])
+                df.insert(1, "sensor", location_id)
                 dfs.append(df)
 
             if not dfs:
