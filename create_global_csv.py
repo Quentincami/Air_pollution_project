@@ -2,7 +2,6 @@ import boto3
 import pandas as pd
 import uuid
 import os
-from concurrent.futures import ThreadPoolExecutor
 import time
 
 
@@ -10,8 +9,9 @@ s3 = boto3.client('s3')
 bucket = 'openaq-sensor-data'
 
 def combine_yearly_files(retry = 5, delay = 2):
-    city = "zurich"
+    city = "lyon"
     prefix = f"{city}/wide/yearly_files"
+    archive_prefix = f"{city}/archive/yearly_files/"
     temp_path = f"/tmp/file_{uuid.uuid4()}.csv"
     output_key = f"{city}/wide/global_{city}_file.csv"
 
@@ -28,6 +28,14 @@ def combine_yearly_files(retry = 5, delay = 2):
                     df=pd.read_csv(obj['Body'])
                     print(f"Processing {file_key} ...")
                     dfs.append(df)
+
+                    file_name = os.path.basename(file_key)
+                    archived_key = f"{archive_prefix}/{file_name}"
+                    s3.copy_object(Bucket=bucket, CopySource ={'Bucket': bucket, 'Key': file_key}, Key=archived_key)
+
+
+                    s3.delete_object(Bucket=bucket, Key=file_key)
+
                 except Exception as e:
                     print(f"Failed to process {file_key}: {e}")
 

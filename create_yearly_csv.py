@@ -19,7 +19,7 @@ def get_years(city, location_id):
 def combine_yearly_files(city, location_id, year, retry = 5, delay = 2):
     prefix = f"{city}/wide/{location_id}/{year}/"
     temp_path = f"/tmp/file_{uuid.uuid4()}.csv"
-    output_key = f"{city}/wide/{location_id}_{year}.csv"
+    output_key = f"{city}/wide/yearly_files/{location_id}_{year}.csv"
 
     attempt = 0
     while attempt < retry:
@@ -31,7 +31,6 @@ def combine_yearly_files(city, location_id, year, retry = 5, delay = 2):
             for file_key in files:
                 obj = s3.get_object(Bucket=bucket, Key=file_key)
                 df=pd.read_csv(obj['Body'])
-                df.insert(1, "sensor", location_id)
                 dfs.append(df)
 
             if not dfs:
@@ -58,8 +57,8 @@ def combine_yearly_files(city, location_id, year, retry = 5, delay = 2):
         os.remove(temp_path)
 
 def main():
-    city = "zurich"
-    location_ids = [9591, 2453499, 9589, 1236033]
+    city = "lyon"
+    location_ids = [3647, 2696, 3638, 3586]
 
     for location_id in location_ids:
             years = get_years(city, location_id)
