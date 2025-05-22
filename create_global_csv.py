@@ -3,6 +3,7 @@ import pandas as pd
 import uuid
 import os
 import time
+from datetime import date
 
 
 s3 = boto3.client('s3')
@@ -13,7 +14,11 @@ def combine_yearly_files(retry = 5, delay = 2):
     prefix = f"{city}/wide/yearly_files"
     archive_prefix = f"{city}/archive/yearly_files/"
     temp_path = f"/tmp/file_{uuid.uuid4()}.csv"
-    output_key = f"{city}/wide/global_{city}_file.csv"
+
+    today = date.today()
+    date_str = today.strftime("%Y-%m-%d") 
+
+    output_key = f"{city}/wide/global_files/global_{city}_{date_str}_file.csv"
 
     attempt = 0
     while attempt < retry:
